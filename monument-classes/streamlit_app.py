@@ -102,14 +102,15 @@ latlong_data = df_coords.apply(lambda row: get_lat_long_from_os(row.Gridref), ax
 latlong_data.columns = ['latitude', 'longitude']
 df_coords = pd.concat([df_coords, latlong_data], axis='columns')
 
-df = df.join(df_coords)
+df_complete = df_coords.join(df)
+df_complete = df_complete.sort_values(by=['clusters','Name'])
 
 map_plot = px.scatter_mapbox(
-    df.sort_values('clusters'),
+    df_complete,
     lat="latitude", 
     lon="longitude", 
     color='clusters',
-    hover_name=df.index,
+    hover_name=df_complete.index,
     hover_data=['Gridref'],
     zoom=3, 
     height=600
@@ -140,6 +141,15 @@ where the cut make the groups most distinct from each other.
 
 The process is presented in the tabs above.
 """)
+with tabs[0].expander("Complete Data"):
+    st.dataframe(df_complete)
+    csv = df_complete.to_csv().encode('utf-8')
+    st.download_button(
+        "Download",
+        csv,
+        "Site Data.csv",
+        "text/csv",
+    )
 
 tabs[1].markdown("""
 In the dendrogram below, longer horizontal lines means more difference between
