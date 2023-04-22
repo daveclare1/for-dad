@@ -3,7 +3,6 @@ import pandas as pd
 
 from scipy.cluster.hierarchy import fcluster
 import numpy as np
-import matplotlib.pyplot as plt
 import plotly.express as px
 
 from dendrogramming import dendrogram_from_df
