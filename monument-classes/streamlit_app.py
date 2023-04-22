@@ -13,7 +13,7 @@ excludes_sites = ['Boskednan,']
 excludes_features = ['other']
 
 df = pd.read_csv(
-    "data_clean.csv",
+    "monument-classes\data_clean.csv",
     index_col=[1,0],
     )
 df.index = df.index.droplevel(0)  # read it in with areas but then get rid of them for now
@@ -91,7 +91,7 @@ for i, row in cluster_values_masked.iterrows():
 
 # map
 df_coords = pd.read_csv(
-    "gridrefs_clean.csv",
+    "monument-classes\gridrefs_clean.csv",
     index_col=[1,0],
     )
 df_coords.index = df_coords.index.droplevel(0)
