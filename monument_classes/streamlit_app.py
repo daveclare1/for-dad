@@ -1,19 +1,24 @@
 import streamlit as st
 import pandas as pd
+import os
 
 from scipy.cluster.hierarchy import fcluster
 import numpy as np
 import plotly.express as px
 
-from monument_classes.dendrogramming import dendrogram_from_df
-from monument_classes.map_tools import get_lat_long_from_os
+from dendrogramming import dendrogram_from_df
+from map_tools import get_lat_long_from_os
+
+dirname = os.path.dirname(__file__)
+data_file = os.path.join(dirname, 'data_clean.csv')
+map_file = os.path.join(dirname, 'gridrefs_clean.csv')
 
 # Load the data
 excludes_sites = ['Boskednan,']
 excludes_features = ['other']
 
 df = pd.read_csv(
-    "monument_classes\data_clean.csv",
+    data_file,
     index_col=[1,0],
     )
 df.index = df.index.droplevel(0)  # read it in with areas but then get rid of them for now
@@ -91,7 +96,7 @@ for i, row in cluster_values_masked.iterrows():
 
 # map
 df_coords = pd.read_csv(
-    "monument_classes\gridrefs_clean.csv",
+    map_file,
     index_col=[1,0],
     )
 df_coords.index = df_coords.index.droplevel(0)
