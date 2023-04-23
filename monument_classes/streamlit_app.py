@@ -13,6 +13,41 @@ dirname = os.path.dirname(__file__)
 data_file = os.path.join(dirname, 'data_clean.csv')
 map_file = os.path.join(dirname, 'gridrefs_clean.csv')
 
+
+# Layout
+st.title("Monument Classification")
+tabs = st.tabs([
+    "Introduction",
+    "Dendrogram",
+    "Group Characteristics",
+    "Map",
+])
+
+with st.sidebar:
+    method_select = st.selectbox(
+        "Clustering Method",
+        [
+        'complete',
+        'ward',
+        'single',
+        'average',
+        'weighted',
+        'centroid',
+        'median',
+        ])
+    cut_threshold = st.slider(
+        "Cut Threshold",
+        0.0, 1.0,
+        value=0.8,
+    )
+    n_characteristics = st.slider(
+        "Characteristics to List",
+        0, 20,
+        value=15
+    )
+    
+
+
 # Load the data
 excludes_sites = ['Boskednan,']
 excludes_features = ['other']
@@ -31,22 +66,21 @@ df = df[df.columns[~df.columns.isin(excludes_features)]]
 
 
 # divide and plot
-dendrogram_plot, linkage = dendrogram_from_df(df, 'ward')
+dendrogram_plot, linkage, n_clusters = dendrogram_from_df(df, method_select, cut_threshold)
 
 
 # analyse properties of groupings
-n_clusters = 4
-n_features = 10
-df['clusters'] = fcluster(linkage, n_clusters, criterion='maxclust')
-df.clusters = df.clusters.astype(str)  # for categorical plot labels
-cluster_values = df.groupby('clusters').mean()
+df['Cluster'] = fcluster(linkage, n_clusters, criterion='maxclust')
+df.Cluster = df.Cluster.astype(str)  # for categorical plot labels
+cluster_values = df.groupby('Cluster').mean()
+cluster_sizes = df.groupby('Cluster').size()
 
 # compute difference metric
 cluster_diffs = cluster_values.apply(lambda row: abs(cluster_values.iloc[cluster_values.index != row.name] - row).min(), axis=1)
 
 # get top 10 columns by highest difference metric
 col_order = cluster_diffs.max().T.sort_values(ascending=False).index
-col_order = col_order[:n_features]
+col_order = col_order[:n_characteristics]
 
 cluster_diffs = cluster_diffs[col_order]
 cluster_values = cluster_values[col_order]
@@ -84,14 +118,15 @@ cluster_diff_plot.update_layout(
 diff_mask = cluster_diffs > 0.1
 cluster_values_masked = cluster_values.mask(~diff_mask, np.nan)
 
-df_descriptions = pd.DataFrame(columns=['Cluster', 'Most Have', " Most Haven't"])
+df_descriptions = pd.DataFrame(columns=['Cluster', 'Sites', 'Most Have', " Most Haven't"])
 
 desc = ''
 for i, row in cluster_values_masked.iterrows():
     desc = desc + f"{i}\n"
+    size = cluster_sizes[i]
     has = ', '.join(row.index[row > 0.5])
     hasnt = ',  '.join(row.index[row < 0.5])
-    df_descriptions.loc[i] = [i, has, hasnt]
+    df_descriptions.loc[i] = [i, size, has, hasnt]
 
 
 # map
@@ -107,13 +142,15 @@ latlong_data.columns = ['latitude', 'longitude']
 df_coords = pd.concat([df_coords, latlong_data], axis='columns')
 
 df_complete = df_coords.join(df)
-df_complete = df_complete.sort_values(by=['clusters','Name'])
+df_complete = df_complete.sort_values(by=['Cluster','Name'])
+col_order = ['Cluster'] + [c for c in df_complete.columns if c != 'Cluster']
+df_complete = df_complete[col_order]
 
 map_plot = px.scatter_mapbox(
     df_complete,
     lat="latitude", 
     lon="longitude", 
-    color='clusters',
+    color='Cluster',
     hover_name=df_complete.index,
     hover_data=['Gridref'],
     zoom=3, 
@@ -128,15 +165,7 @@ map_plot.update_layout(
     )
 
 
-# Layout
-st.title("Monument Classification")
-tabs = st.tabs([
-    "Introduction",
-    "Dendrogram",
-    "Group Characteristics",
-    "Map",
-])
-
+# Tabs
 tabs[0].markdown("""
 Agglomerative clustering is used to group together the most similar sites
 step by step, each time adding another site to an existing group. The
@@ -155,12 +184,13 @@ with tabs[0].expander("Complete Data"):
         "text/csv",
     )
 
-tabs[1].markdown("""
+tabs[1].markdown(f"""
 In the dendrogram below, longer horizontal lines means more difference between
 the connected elements. 
 
-For this grouping it was chosen to split at 4 clusters, as at this level the
-difference between them is still quite large.
+By setting the cut threshold to {cut_threshold}, {n_clusters} clusters have 
+been formed, as at this level the difference between them is still 
+quite large.
 
 Note that the first three clusters are more similar to each other than to the
 fourth.
