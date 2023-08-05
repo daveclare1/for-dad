@@ -3,8 +3,6 @@ from math import floor
 
 from OSGridConverter import grid2latlong
 from pyproj import Transformer
-import plotly.express as px
-import pandas as pd
 
 def irish_grid_letter_offsets(letter):
     letter_num = ord(letter) - 65

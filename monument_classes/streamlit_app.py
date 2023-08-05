@@ -5,7 +5,6 @@ import os
 from scipy.cluster.hierarchy import fcluster
 import numpy as np
 import plotly.express as px
-import plotly.colors as pc
 from alphashape import alphashape
 
 from dendrogramming import dendrogram_from_df
