@@ -5,6 +5,8 @@ import os
 from scipy.cluster.hierarchy import fcluster
 import numpy as np
 import plotly.express as px
+import plotly.colors as pc
+from alphashape import alphashape
 
 from dendrogramming import dendrogram_from_df
 from map_tools import get_lat_long_from_os
@@ -45,21 +47,25 @@ with st.sidebar:
         0, 20,
         value=15
     )
+    show_map_regions = st.checkbox(
+        "Show alpha shapes on map",
+        value = False
+    )
     
 
 
 # Load the data
-excludes_sites = ['Boskednan,']
+excludes_sites = ['Boskednan']
 excludes_features = ['other']
 
 df = pd.read_csv(
     data_file,
-    index_col=[1,0],
+    index_col=[0],
     )
-df.index = df.index.droplevel(0)  # read it in with areas but then get rid of them for now
+# df.index = df.index.droplevel(0)  # read it in with areas but then get rid of them for now
 df = df.fillna(0)
 df = df.replace(['y', 'Y', '?'], [1, 1, 0.5])
-df = df.astype(int)
+df = df.astype(float)
 df.index = df.index.str.strip()
 df = df[~df.index.isin(excludes_sites)]
 df = df[df.columns[~df.columns.isin(excludes_features)]]
@@ -132,16 +138,16 @@ for i, row in cluster_values_masked.iterrows():
 # map
 df_coords = pd.read_csv(
     map_file,
-    index_col=[1,0],
+    index_col=[0],
     )
-df_coords.index = df_coords.index.droplevel(0)
+# df_coords.index = df_coords.index.droplevel(0)
 df_coords = df_coords.dropna()
 
 latlong_data = df_coords.apply(lambda row: get_lat_long_from_os(row.Gridref), axis='columns', result_type='expand')
 latlong_data.columns = ['latitude', 'longitude']
 df_coords = pd.concat([df_coords, latlong_data], axis='columns')
 
-df_complete = df_coords.join(df)
+df_complete = df_coords.join(df, on='Name')
 df_complete = df_complete.sort_values(by=['Cluster','Name'])
 col_order = ['Cluster'] + [c for c in df_complete.columns if c != 'Cluster']
 df_complete = df_complete[col_order]
@@ -156,6 +162,28 @@ map_plot = px.scatter_mapbox(
     zoom=3, 
     height=600
     )
+
+if show_map_regions:
+    for cluster_id, cluster in df_complete.groupby('Cluster'):
+        try:
+            df = cluster.dropna(how='any')
+            # print(list(zip(df.latitude, df.longitude)))
+            alpha_shape = alphashape(list(zip(df.longitude, df.latitude)), 0.3)
+            # print(alpha_shape.exterior.coords.xy)
+            lon, lat = alpha_shape.exterior.coords.xy
+            print(cluster_id)
+            print(map_plot.data[int(cluster_id)-1].marker.color)
+            map_plot.add_scattermapbox(
+                mode='none',
+                # fillcolor=map_plot.data[int(cluster_id)-1].marker.color,
+                fill="toself",
+                lon=lon.tolist(),
+                lat=lat.tolist(),
+                # opacity=0.1,
+                name=f"Region {cluster_id}"
+            )
+        except:
+            pass
 
 map_plot.update_layout(
     mapbox_style= "carto-positron",
