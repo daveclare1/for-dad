@@ -46,6 +46,14 @@ with st.sidebar:
         0, 20,
         value=15
     )
+    excl_no_features = st.checkbox(
+        "Exclude columns with 'no feature' data",
+        value=True
+    )
+    excl_diam4 = st.checkbox(
+        "Exclude 'diameter 4'",
+        value=True
+    )
     show_map_regions = st.checkbox(
         "Show alpha shapes on map",
         value = False
@@ -54,8 +62,11 @@ with st.sidebar:
 
 
 # Load the data
-excludes_sites = ['Boskednan']
-excludes_features = ['other']
+# excludes_sites = ['Boskednan']
+excludes_features = [
+    'no perimeter focal point',
+    'nothing in interior',
+    ]
 
 df = pd.read_csv(
     data_file,
@@ -66,8 +77,11 @@ df = df.fillna(0)
 df = df.replace(['y', 'Y', '?'], [1, 1, 0.5])
 df = df.astype(float)
 df.index = df.index.str.strip()
-df = df[~df.index.isin(excludes_sites)]
-df = df[df.columns[~df.columns.isin(excludes_features)]]
+# df = df[~df.index.isin(excludes_sites)]
+if excl_no_features:
+    df = df[df.columns[~df.columns.isin(excludes_features)]]
+if excl_diam4:
+    df = df[df.columns[~df.columns.str.contains("diam 4")]]
 
 
 # divide and plot
